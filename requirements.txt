@@ -1,0 +1,13 @@
+pymongo
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+joblib
+python-dotenv
+tqdm
+jupyter
+fastapi
+uvicorn
+prophet
