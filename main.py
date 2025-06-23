@@ -10,6 +10,15 @@ import pandas as pd
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # O puedes limitarlo a tu frontend: ["https://tudominio.com"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 MODELO_GENERAL_PATH = "modelos/general/modelo_general_timeseries.pkl"
 MODELO_PRODUCTOS_DIR = "modelos/productos/"
 
