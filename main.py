@@ -15,8 +15,8 @@ MODELO_PRODUCTOS_DIR = "modelos/productos/"
 
 class TimeseriesRequest(BaseModel):
     tenant_id: str
-    dias_historial: int = 30
-    dias_prediccion: int = 7
+    dias_historial: int = 90
+    dias_prediccion: int = 90
 
 class TimeseriesProductoRequest(TimeseriesRequest):
     producto_id: str
@@ -41,32 +41,35 @@ def train_general_timeseries_api(req: TimeseriesRequest):
 @app.post("/predict_general_timeseries/")
 def predict_general_timeseries_api(req: TimeseriesRequest):
     tenant_id = req.tenant_id
-    dias_historial = req.dias_historial
-    dias_prediccion = req.dias_prediccion
+    dias_prediccion = req.dias_prediccion  # normalmente 90
 
-    print(f"[LOG][API] Predicción general: tenant_id={tenant_id}, dias_historial={dias_historial}, dias_prediccion={dias_prediccion}")
-    df = extract_and_transform_general_timeseries(tenant_id)
+    print(f"[LOG][API] Predicción general: tenant_id={tenant_id}, dias_prediccion={dias_prediccion}")
+    df = extract_and_transform_general_timeseries(tenant_id)  # ¡Ya trae 90 días!
+
     print(f"[LOG][API] DataFrame general shape: {df.shape}")
     if df.empty:
         print("[LOG][API] No hay datos para predicción general.")
         return {"historial": [], "predicciones": []}
-    df_hist = df.sort_values("ds").tail(dias_historial)
 
     if os.path.exists(MODELO_GENERAL_PATH):
         print(f"[LOG][API] Cargando modelo general de {MODELO_GENERAL_PATH}")
         model = load_general_timeseries_model(MODELO_GENERAL_PATH)
     else:
         print("[LOG][API] Modelo general no existe, entrenando...")
-        model = train_general_timeseries_model(df_hist, MODELO_GENERAL_PATH)
+        model = train_general_timeseries_model(df, MODELO_GENERAL_PATH)
 
     historial = [
         {"fecha": row["ds"].strftime("%Y-%m-%d"), "venta_total": float(row["y"])}
-        for _, row in df_hist.iterrows()
+        for _, row in df.iterrows()
     ]
     print(f"[LOG][API] Historial general: {historial if len(historial)<10 else '...'}")
-    predicciones_df = predict_general_timeseries(df_hist, model, dias_prediccion=dias_prediccion)
+    predicciones_df = predict_general_timeseries(df, model, dias_prediccion=dias_prediccion)
     predicciones = predicciones_df.to_dict(orient="records")
     print(f"[LOG][API] Predicciones general: {predicciones if len(predicciones)<10 else '...'}")
+
+    # Prints para depurar
+    print(f"[LOG][API] Días en historial: {len(historial)} ({historial[0]['fecha']} a {historial[-1]['fecha']})")
+    print(f"[LOG][API] Días en predicción: {len(predicciones)} ({predicciones[0]['fecha']} a {predicciones[-1]['fecha']})")
 
     return {
         "historial": historial,
