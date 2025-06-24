@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def predict_general_timeseries(df, model, dias_prediccion=90):
     """
     Usa el modelo Prophet para predecir ventas totales por día (general).

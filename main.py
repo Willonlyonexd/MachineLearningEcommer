@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from etl.transformextra import obtener_ventas_recientes
+from estadisticas.general import resumen_modelo, alerta_tendencia_anomala
 from etl.transformgeneral import extract_and_transform_general_timeseries
 from etl.transformproductos import extract_and_transform_product_timeseries
 from tensorflow.modelgeneral import train_general_timeseries_model, load_general_timeseries_model
@@ -186,6 +188,27 @@ def predict_product_timeseries_api(req: TimeseriesProductoRequest):
         "historial": historial,
         "predicciones": predicciones
     }
+
+@app.post("/ventas_recientes/")
+def endpoint_ventas_recientes(req: TimeseriesRequest):
+    df = obtener_ventas_recientes(req.tenant_id)
+    return df.to_dict(orient="records")
+
+@app.post("/resumen_modelo/")
+def endpoint_resumen_modelo(req: TimeseriesRequest):
+    predicciones = predict_general_timeseries(req.tenant_id, req.dias_historial, req.dias_prediccion)
+    if not isinstance(predicciones, list) or not predicciones:
+        return {"mensaje": "No se generaron predicciones"}
+    return resumen_modelo(predicciones, req.dias_historial, req.dias_prediccion)
+
+@app.post("/alerta_tendencia/")
+def endpoint_alerta_tendencia(req: TimeseriesRequest):
+    predicciones = predict_general_timeseries(req.tenant_id, req.dias_historial, req.dias_prediccion)
+    if not isinstance(predicciones, list) or not predicciones:
+        return {"alerta": False, "detalle": "No se generaron predicciones"}
+    return alerta_tendencia_anomala(predicciones)
+
+
 
 if __name__ == "__main__":
     import uvicorn
